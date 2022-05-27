@@ -1,0 +1,11 @@
+{
+  "name": "midi-stream",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "argparse": "^2.0.1",
+    "easymidi": "^2.1.0",
+    "midi": "^2.0.0"
+  }
+}
