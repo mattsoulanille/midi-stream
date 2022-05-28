@@ -4,8 +4,13 @@
   "main": "index.js",
   "license": "Apache-2.0",
   "dependencies": {
+    "@types/node": "^17.0.35",
     "argparse": "^2.0.1",
     "easymidi": "^2.1.0",
-    "midi": "^2.0.0"
+    "midi": "^2.0.0",
+    "typescript": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/argparse": "^2.0.10"
   }
 }

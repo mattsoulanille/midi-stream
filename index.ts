@@ -1,7 +1,7 @@
-const udp = require('dgram');
-const buffer = require('buffer');
-const midi = require('midi');
-const { ArgumentParser } = require('argparse');
+import * as udp from 'dgram';
+import * as buffer from 'buffer';
+import * as midi from 'midi';
+import {ArgumentParser} from 'argparse';
 
 const PORT = 2222;
 
@@ -23,8 +23,8 @@ function server() {
   
   const clients = new Map();
 
-  server.on('message', (msg, info) => {
-    if (msg = 'subscribe') {
+  server.on('message', (msg: string, info) => {
+    if (msg === 'subscribe') {
       console.log(`Subscribing ${info.address}:${info.port}`);
       clients.set(info.address, info.port);
     }
@@ -32,7 +32,7 @@ function server() {
 
   server.bind({port: PORT});
 
-  input.on('message', (deltaTime, message) => {
+  input.on('message', (deltaTime: number, message: unknown) => {
     console.log(message);
     for (const [address, port] of clients) {
       server.send(JSON.stringify({
@@ -46,7 +46,7 @@ function server() {
   console.log(`Serving ${input.getPortName(port)}`);
 }
 
-function client(serverAddress) {
+function client(serverAddress: string) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const client = udp.createSocket('udp4');
