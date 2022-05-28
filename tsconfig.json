@@ -5,11 +5,7 @@
   ],
   "compilerOptions": {
 	"target": "es2020",
-    "typeRoots": [
-      "node_modules/@types",
-      "./types"
-    ],
-	"module": "esnext",
+	"module": "commonjs",
 	"lib": ["dom", "dom.iterable", "esnext", "scripthost"],
 	"declaration": true,
 	"sourceMap": true,
