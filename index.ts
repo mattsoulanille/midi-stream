@@ -8,7 +8,7 @@ import { isRight } from 'fp-ts/lib/Either';
 
 const LocalMessage = t.type({
   midiMessage: t.tuple([t.number, t.number, t.number]),
-  deltaTime: t.number,
+  time: t.number,
 });
 type LocalMessage = t.TypeOf<typeof LocalMessage>;
 
@@ -16,20 +16,20 @@ const Message = new t.Type(
   'Message',
   LocalMessage.is,
   (i: Buffer, context) => {
-    if (i.length !== 7) {
+    if (i.length !== 9) {
       return t.failure(i, context);
     }
     const dv = new DataView(i.buffer);
     return t.success({
       midiMessage: [i[0], i[1], i[2]] as [number, number, number],
-      deltaTime: dv.getUint32(3),
+      time: dv.getFloat64(3),
     });
   },
   a => {
-    const buf = Buffer.alloc(7);
+    const buf = Buffer.alloc(9);
     buf.set(a.midiMessage, 0);
     const dv = new DataView(buf.buffer);
-    dv.setFloat32(3, a.deltaTime);
+    dv.setFloat64(3, a.time);
     return buf;
   }
 );
@@ -50,10 +50,24 @@ function makeTcpServer() {
   server.listen(PORT);
 
   return (message: Message) => {
+    console.log(clients);
     for (const socket of clients) {
       socket.write(Message.encode(message));
     }
   }
+}
+
+function makeTcpClient(ip: string, cb: (m: Message) => void) {
+  const client = new net.Socket();
+  client.connect({port: PORT, host: ip});
+  client.on('data', data => {
+    const maybeMessage = Message.decode(data);
+    if (isRight(maybeMessage)) {
+      cb(maybeMessage.right);
+    } else {
+      console.warn(maybeMessage.left);
+    }
+  });
 }
 
 const UDP_TIMEOUT = 30_000;
@@ -131,7 +145,7 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
 }
 
 type Protocol = 'tcp' | 'udp';
-function server(protocol: Protocol) {
+function server() {
   const input = new midi.Input();
   let port;
   let search = 'Piano';
@@ -144,26 +158,52 @@ function server(protocol: Protocol) {
   if (port === undefined) {
     throw new Error(`No midi device with ${search} in its name found`);
   }
-  
-  if (protocol === 'udp') {
-    const send = makeUdpServer();
-    input.on('message', (deltaTime, midiMessage) => {
-      send({deltaTime, midiMessage});
-    });
+
+  const udp = makeUdpServer();
+  const tcp = makeTcpServer();
+  const send = (m: Message) => {
+    udp(m);
+    tcp(m);
   }
+
+  let time = 0;
+  input.on('message', (deltaTime, midiMessage) => {
+    time += deltaTime;
+    send({time , midiMessage});
+  });
   input.openPort(port);
   console.log(`Serving ${input.getPortName(port)}`);
 }
 
-function client(serverAddress: string) {
+class BufferedMidi {
+  private timeOffset: number | undefined;
+  constructor(readonly play: (m: midi.MidiMessage) => void,
+              public buffer_ms: number) {}
+  insert(m: Message) {
+    if (this.timeOffset == null) {
+      this.timeOffset = m.time - performance.now();
+    }
+
+    const playTime = m.time - this.timeOffset + this.buffer_ms;
+    setTimeout(() => this.play(m.midiMessage),
+               playTime - performance.now());
+  }
+}
+
+function client(serverAddress: string, protocol: Protocol, bufferMs: number) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const output = new midi.Output();
   output.openVirtualPort('Pi Piano');
 
-  makeUdpClient(serverAddress, message => {
-    output.sendMessage(message.midiMessage);
-  });
+  const buf = new BufferedMidi(midi => output.sendMessage(midi), 500);
+  const insert = (m: Message) => buf.insert(m);
+
+  if (protocol === 'udp') {
+    makeUdpClient(serverAddress, insert);
+  } else {
+    makeTcpClient(serverAddress, insert);
+  }
 }
 
 if (require.main === module) {
