@@ -3,7 +3,7 @@ import * as midi from 'midi';
 import {ArgumentParser} from 'argparse';
 import * as net from 'net';
 import * as t from 'io-ts';
-import { isRight } from 'fp-ts/lib/Either';
+import {isRight} from 'fp-ts/lib/Either';
 
 const LocalMessage = t.type({
   midiMessage: t.tuple([t.number, t.number, t.number]),
@@ -193,7 +193,7 @@ function getInput(inputName: string): midi.Input {
 type Protocol = 'tcp' | 'udp';
 function server(inputName: string) {
   let input = getInput(inputName);
-  const activeNotes = new Set<[number, number]>();
+  const activeNotes = new Set<number>();
   const udp = makeUdpServer();
   const tcp = makeTcpServer();
   const send = (m: Message) => {
@@ -215,11 +215,10 @@ function server(inputName: string) {
 
       // Track what notes are on, so they can be turned off when the device
       // disconnects.
-      const note: [number, number] = [midiMessage[0], midiMessage[1]];
       if (midiMessage[2]) {
-        activeNotes.add(note);
+        activeNotes.add(midiMessage[1]);
       } else {
-        activeNotes.delete(note);
+        activeNotes.delete(midiMessage[1]);
       }
 
       send({time, midiMessage});
@@ -237,7 +236,7 @@ function server(inputName: string) {
       portOpen = false;
       input.closePort();
       for (const note of activeNotes) {
-        send({time, midiMessage: [...note, 0]});
+        send({time, midiMessage: [144, note, 0]});
       }
     }
     if (hasPort && !portOpen) {
@@ -274,6 +273,26 @@ class BufferedMidi {
   }
 }
 
+function stuckNoteFixer(play: (m: midi.MidiMessage) => void) {
+  const notes = new Map<number /* note */, NodeJS.Timeout>();
+  return (m: midi.MidiMessage) => {
+    if (m[0] === 144) {
+      const note = m[1];
+      if (notes.has(note)) {
+        play([144, m[1], 0]);
+        clearTimeout(notes.get(note));
+        notes.delete(note);
+      }
+      if (m[2] !== 0) {
+        notes.set(note, setTimeout(() => {
+          play([144, m[1], 0]);
+        }, 30_000));
+      }
+    }
+    play(m);
+  }
+}
+
 function client(serverAddress: string, protocol: Protocol, bufferMs: number,
                 outputName?: string) {
   // creating a client socket
@@ -292,8 +311,10 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
     console.log(`Using virtual port ${virtualPort}`);
     output.openVirtualPort(virtualPort);
   }
-
-  const buf = new BufferedMidi(midi => output.sendMessage(midi), bufferMs);
+  function play(midi: midi.MidiMessage) {
+    output.sendMessage(midi);
+  }
+  const buf = new BufferedMidi(stuckNoteFixer(play), bufferMs);
   const insert = (m: Message) => buf.insert(m);
 
   if (protocol === 'udp') {
