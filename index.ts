@@ -184,10 +184,10 @@ class BufferedMidi {
               public buffer_ms: number) {}
   insert(m: Message) {
     if (this.timeOffset == null) {
-      this.timeOffset = m.time - performance.now();
+      this.timeOffset = m.time * 1000 - performance.now();
     }
 
-    const playTime = m.time - this.timeOffset + this.buffer_ms;
+    const playTime = m.time * 1000 - this.timeOffset + this.buffer_ms;
     setTimeout(() => this.play(m.midiMessage),
                playTime - performance.now());
   }
