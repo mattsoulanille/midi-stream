@@ -106,7 +106,7 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
           connect(); // Reconnect
         }
       });
-    });
+    }, UDP_TIMEOUT / 2);
     client.on('message', (msg, info) => {
       const maybeMessage = Message.decode(msg);
       if (info.address !== ip) {
