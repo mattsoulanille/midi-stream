@@ -82,12 +82,14 @@ function makeUdpServer() {
         port: info.port,
         timeout: makeTimeout(info.address),
       });
+      console.log(clients.keys());
     }
   });
 
   server.bind({port: PORT});
   return (message: Message) => {
     for (const [address, {port}] of clients) {
+      console.log(message);
       server.send(Message.encode(message), port, address);
     }
   }
@@ -97,7 +99,7 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
   function connect() {
     const client = udp.createSocket('udp4');
 
-    const connectionInterval = setInterval(() => {
+    function keepalive() {
       client.send(Buffer.from('subscribe'), PORT, ip, err => {
         if (err) {
           client.close();
@@ -106,7 +108,9 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
           connect(); // Reconnect
         }
       });
-    }, UDP_TIMEOUT / 2);
+    }
+
+    const connectionInterval = setInterval(keepalive, UDP_TIMEOUT / 2);
     client.on('message', (msg, info) => {
       const maybeMessage = Message.decode(msg);
       if (info.address !== ip) {
@@ -119,6 +123,7 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
         console.warn(maybeMessage.left);
       }
     });
+    keepalive();
   }
   connect();
 }
