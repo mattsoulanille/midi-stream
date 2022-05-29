@@ -171,19 +171,21 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
   connect();
 }
 
-type Protocol = 'tcp' | 'udp';
-function server() {
-  const input = new midi.Input();
-  let port;
-  let search = 'Piano';
-  for (let i = 0; i < input.getPortCount(); i++) {
-    if (input.getPortName(i).includes(search)) {
-      port = i;
+function getPort(midiInterface: midi.Input | midi.Output, portName: string) {
+  for (let i = 0; i < midiInterface.getPortCount(); i++) {
+    if (midiInterface.getPortName(i).includes(portName)) {
+      return i;
     }
   }
+  return undefined;
+}
 
+type Protocol = 'tcp' | 'udp';
+function server(inputName: string) {
+  const input = new midi.Input();
+  const port = getPort(input, inputName);
   if (port === undefined) {
-    throw new Error(`No midi device with ${search} in its name found`);
+    throw new Error(`No midi device with ${inputName} in its name found`);
   }
 
   const udp = makeUdpServer();
@@ -221,11 +223,24 @@ class BufferedMidi {
   }
 }
 
-function client(serverAddress: string, protocol: Protocol, bufferMs: number) {
+function client(serverAddress: string, protocol: Protocol, bufferMs: number,
+                outputName?: string) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const output = new midi.Output();
-  output.openVirtualPort('Pi Piano');
+  let port: number | undefined;
+  if (outputName) {
+    port = getPort(output, outputName);
+  }
+
+  if (port) {
+    console.log(`Using real port ${output.getPortName(port)}`);
+    output.openPort(port);
+  } else {
+    const virtualPort = 'Remote Piano';
+    console.log(`Using virtual port ${virtualPort}`);
+    output.openVirtualPort(virtualPort);
+  }
 
   const buf = new BufferedMidi(midi => output.sendMessage(midi), bufferMs);
   const insert = (m: Message) => buf.insert(m);
@@ -247,23 +262,33 @@ if (require.main === module) {
     nargs: '?',
     default: ''
   });
+  parser.add_argument('--input', '-i', {
+    type: String,
+    nargs: '?',
+    default: 'Piano',
+    help: 'The midi input to serve',
+  });
+  parser.add_argument('--output', '-o', {
+    type: String,
+    default: 'Piano',
+    help: 'The midi output to use. Defaults to synthetic output.',
+  });
   parser.add_argument('--protocol', '-p', {
     type: String,
     choices: ['tcp', 'udp'],
-    default: 'udp',
+    default: 'tcp',
   });
   parser.add_argument('--buffer', '-b', {
     type: Number,
-    default: 0,
+    default: 5000,
     help: 'Buffer for notes in milliseconds'
   });
 
   const args = parser.parse_args();
   if (args.server_address) {
-    client(args.server_address, args.protocol, args.buffer);
+    client(args.server_address, args.protocol, args.buffer, args.output);
   }
   else {
-    server();
+    server(args.input);
   }
 }
-
