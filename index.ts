@@ -44,15 +44,16 @@ function makeTcpServer() {
   const clients = new Set<net.Socket>();
   server.on('connection', socket => {
     clients.add(socket);
+    console.log([...clients].map(c => c.address()));
     socket.on('close', () => {
       clients.delete(socket);
+      console.log([...clients].map(c => c.address()));
     });
   });
 
   server.listen(PORT);
 
   return (message: Message) => {
-    console.log(clients);
     for (const socket of clients) {
       socket.write(Message.encode(message));
     }
@@ -83,8 +84,8 @@ function makeUdpServer() {
 
   function makeTimeout(address: string) {
     return setTimeout(() => {
-      console.log(`Removing client ${address}`);
       clients.delete(address);
+      console.log([...clients.keys()]);
     }, UDP_TIMEOUT);
   }
 
@@ -100,15 +101,14 @@ function makeUdpServer() {
           port: info.port,
           timeout: makeTimeout(info.address),
         });
+        console.log([...clients.keys()]);
       }
-      console.log(clients.keys());
     }
   });
 
   server.bind({port: PORT});
   return (message: Message) => {
     for (const [address, {port}] of clients) {
-      console.log(message);
       server.send(Message.encode(message), port, address);
     }
   }
