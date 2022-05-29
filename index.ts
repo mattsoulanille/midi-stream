@@ -37,6 +37,27 @@ const Message = new t.Type(
 );
 type Message = t.TypeOf<typeof Message>;
 
+class MessageStream {
+  constructor(public cb: (message: Message) => void) {}
+
+  insert(data: Buffer) {
+    if (data.length % BUF_SIZE !== 0) {
+      console.warn(`Got data of length ${data.length} !%= ${BUF_SIZE}`, data);
+      return;
+    }
+
+    for (let i = 0; i < data.length / BUF_SIZE; i++) {
+      const sliced = data.slice(i * BUF_SIZE, (i + 1) * BUF_SIZE);
+      const maybeMessage = Message.decode(sliced);
+      if (isRight(maybeMessage)) {
+        this.cb(maybeMessage.right);
+      } else {
+        console.warn('Failed to decode message', maybeMessage.left);
+      }
+    }
+  }
+}
+
 const PORT = 2222;
 
 function makeTcpServer() {
@@ -63,13 +84,9 @@ function makeTcpServer() {
 function makeTcpClient(ip: string, cb: (m: Message) => void) {
   const client = new net.Socket();
   client.connect({port: PORT, host: ip});
+  const messageStream = new MessageStream(cb);
   client.on('data', data => {
-    const maybeMessage = Message.decode(data);
-    if (isRight(maybeMessage)) {
-      cb(maybeMessage.right);
-    } else {
-      console.warn(maybeMessage.left);
-    }
+    messageStream.insert(data);
   });
 }
 
@@ -130,17 +147,13 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
     }
 
     const connectionInterval = setInterval(keepalive, UDP_TIMEOUT / 8);
+    const messageStream = new MessageStream(cb);
     client.on('message', (msg, info) => {
-      const maybeMessage = Message.decode(msg);
       if (info.address !== ip) {
         console.warn(`Ignoring message from ${info.address}`);
         return;
       }
-      if (isRight(maybeMessage)) {
-        cb(maybeMessage.right);
-      } else {
-        console.warn(maybeMessage.left);
-      }
+      messageStream.insert(msg);
     });
     keepalive();
   }
