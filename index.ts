@@ -12,11 +12,13 @@ const LocalMessage = t.type({
 });
 type LocalMessage = t.TypeOf<typeof LocalMessage>;
 
+// [uint8, uint8, uint8, float64]
+const BUF_SIZE = 3 + 8;
 const Message = new t.Type(
   'Message',
   LocalMessage.is,
   (i: Buffer, context) => {
-    if (i.length !== 9) {
+    if (i.length !== BUF_SIZE) {
       return t.failure(i, context);
     }
     const dv = new DataView(i.buffer);
@@ -26,7 +28,7 @@ const Message = new t.Type(
     });
   },
   a => {
-    const buf = Buffer.alloc(9);
+    const buf = Buffer.alloc(BUF_SIZE);
     buf.set(a.midiMessage, 0);
     const dv = new DataView(buf.buffer);
     dv.setFloat64(3, a.time);
