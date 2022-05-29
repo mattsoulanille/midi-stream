@@ -67,6 +67,7 @@ function makeUdpServer() {
 
   function makeTimeout(address: string) {
     return setTimeout(() => {
+      console.log(`Removing client ${address}`);
       clients.delete(address);
     }, UDP_TIMEOUT);
   }
@@ -77,11 +78,12 @@ function makeUdpServer() {
         const entry = clients.get(info.address)!;
         clearTimeout(entry.timeout);
         entry.timeout = makeTimeout(info.address);
+      } else {
+        clients.set(info.address, {
+          port: info.port,
+          timeout: makeTimeout(info.address),
+        });
       }
-      clients.set(info.address, {
-        port: info.port,
-        timeout: makeTimeout(info.address),
-      });
       console.log(clients.keys());
     }
   });
