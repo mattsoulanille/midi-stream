@@ -58,7 +58,7 @@ class MessageStream {
   }
 }
 
-const PORT = 2222;
+const PORT = 25114;
 
 function makeTcpServer() {
   const server = net.createServer();
