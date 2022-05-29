@@ -82,12 +82,23 @@ function makeTcpServer() {
 }
 
 function makeTcpClient(ip: string, cb: (m: Message) => void) {
-  const client = new net.Socket();
-  client.connect({port: PORT, host: ip});
-  const messageStream = new MessageStream(cb);
-  client.on('data', data => {
-    messageStream.insert(data);
-  });
+  function connect() {
+    const client = new net.Socket();
+
+    client.connect({port: PORT, host: ip});
+    const messageStream = new MessageStream(cb);
+    client.on('data', data => {
+      messageStream.insert(data);
+    });
+    client.on('close', () => {
+      setTimeout(connect, 5000);
+    });
+    client.on('error', err => {
+      console.warn(err);
+      // No need to call connect() here since the 'close' event is also emitted.
+    });
+  }
+  connect();
 }
 
 const UDP_TIMEOUT = 30_000;
