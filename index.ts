@@ -94,6 +94,7 @@ function makeUdpServer() {
         const entry = clients.get(info.address)!;
         clearTimeout(entry.timeout);
         entry.timeout = makeTimeout(info.address);
+        entry.port = info.port;
       } else {
         clients.set(info.address, {
           port: info.port,
