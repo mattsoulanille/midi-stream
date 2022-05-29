@@ -23,8 +23,8 @@ function server() {
   
   const clients = new Map();
 
-  server.on('message', (msg: string, info) => {
-    if (msg === 'subscribe') {
+  server.on('message', (msg: Buffer, info) => {
+    if (msg.toString('utf8') === 'subscribe') {
       console.log(`Subscribing ${info.address}:${info.port}`);
       clients.set(info.address, info.port);
     }
