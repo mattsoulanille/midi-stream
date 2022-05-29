@@ -233,7 +233,7 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
     port = getPort(output, outputName);
   }
 
-  if (port) {
+  if (port != undefined) {
     console.log(`Using real port ${output.getPortName(port)}`);
     output.openPort(port);
   } else {
