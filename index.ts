@@ -196,7 +196,7 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number) {
   const output = new midi.Output();
   output.openVirtualPort('Pi Piano');
 
-  const buf = new BufferedMidi(midi => output.sendMessage(midi), 500);
+  const buf = new BufferedMidi(midi => output.sendMessage(midi), bufferMs);
   const insert = (m: Message) => buf.insert(m);
 
   if (protocol === 'udp') {
@@ -221,13 +221,18 @@ if (require.main === module) {
     choices: ['tcp', 'udp'],
     default: 'udp',
   });
+  parser.add_argument('--buffer', '-b', {
+    type: Number,
+    default: 0,
+    help: 'Buffer for notes in milliseconds'
+  });
 
   const args = parser.parse_args();
   if (args.server_address) {
-    client(args.server_address);
+    client(args.server_address, args.protocol, args.buffer);
   }
   else {
-    server(args.protocol);
+    server();
   }
 }
 
