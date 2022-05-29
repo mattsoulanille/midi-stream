@@ -2,7 +2,6 @@ import * as udp from 'dgram';
 import * as midi from 'midi';
 import {ArgumentParser} from 'argparse';
 import * as net from 'net';
-import { Stream } from 'stream';
 import * as t from 'io-ts';
 import { isRight } from 'fp-ts/lib/Either';
 
@@ -202,23 +201,35 @@ function server(inputName: string) {
     tcp(m);
   }
 
-  let time = new Date().getTime();
-
+  let time: number;
   function setupInput(input: midi.Input) {
+    let firstInput = true;
     input.on('message', (deltaTime, midiMessage) => {
-      time += deltaTime * 1000;
+      // Use the device's delta, which is more accurate, execpt for the first
+      // message from the device.
+      if (firstInput) {
+        time = new Date().getTime();
+      } else {
+        time += deltaTime * 1000;
+      }
+
+      // Track what notes are on, so they can be turned off when the device
+      // disconnects.
       const note: [number, number] = [midiMessage[0], midiMessage[1]];
       if (midiMessage[2]) {
         activeNotes.add(note);
       } else {
         activeNotes.delete(note);
       }
+
       send({time, midiMessage});
     });
   }
+
   setupInput(input);
   let portOpen = true;
 
+  // There's no event for a device disconnecting, so use polling.
   setInterval(() => {
     const hasPort = getPort(input, inputName) !== undefined;
     if (!hasPort && portOpen) {
