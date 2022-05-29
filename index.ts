@@ -196,6 +196,10 @@ class BufferedMidi {
   constructor(readonly play: (m: midi.MidiMessage) => void,
               public buffer_ms: number) {}
   insert(m: Message) {
+    if (this.buffer_ms === 0) {
+      this.play(m.midiMessage);
+      return;
+    }
     if (this.timeOffset == null) {
       this.timeOffset = m.time * 1000 - performance.now();
     }
