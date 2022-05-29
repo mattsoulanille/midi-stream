@@ -180,14 +180,21 @@ function getPort(midiInterface: midi.Input | midi.Output, portName: string) {
   return undefined;
 }
 
-type Protocol = 'tcp' | 'udp';
-function server(inputName: string) {
+function getInput(inputName: string): midi.Input {
   const input = new midi.Input();
   const port = getPort(input, inputName);
   if (port === undefined) {
     throw new Error(`No midi device with ${inputName} in its name found`);
   }
 
+  input.openPort(port);
+  return input;
+}
+
+type Protocol = 'tcp' | 'udp';
+function server(inputName: string) {
+  let input = getInput(inputName);
+  const activeNotes = new Set<[number, number]>();
   const udp = makeUdpServer();
   const tcp = makeTcpServer();
   const send = (m: Message) => {
@@ -195,13 +202,46 @@ function server(inputName: string) {
     tcp(m);
   }
 
-  let time = 0;
-  input.on('message', (deltaTime, midiMessage) => {
-    time += deltaTime;
-    send({time , midiMessage});
-  });
-  input.openPort(port);
-  console.log(`Serving ${input.getPortName(port)}`);
+  let time = new Date().getTime();
+
+  function setupInput(input: midi.Input) {
+    input.on('message', (deltaTime, midiMessage) => {
+      time += deltaTime * 1000;
+      const note: [number, number] = [midiMessage[0], midiMessage[1]];
+      if (midiMessage[2]) {
+        activeNotes.add(note);
+      } else {
+        activeNotes.delete(note);
+      }
+      send({time, midiMessage});
+    });
+  }
+  setupInput(input);
+  let portOpen = true;
+
+  setInterval(() => {
+    const hasPort = getPort(input, inputName) !== undefined;
+    if (!hasPort && portOpen) {
+      console.log('closing port');
+      portOpen = false;
+      input.closePort();
+      for (const note of activeNotes) {
+        send({time, midiMessage: [...note, 0]});
+      }
+    }
+    if (hasPort && !portOpen) {
+      console.log('opening port');
+      try {
+        input = getInput(inputName);
+        setupInput(input);
+        portOpen = true;
+      } catch (e) {
+        if (!(e instanceof Error && e.message.includes('No midi device'))) {
+          console.warn(e);
+        }
+      }
+    }
+  }, 50);
 }
 
 class BufferedMidi {
@@ -214,10 +254,10 @@ class BufferedMidi {
       return;
     }
     if (this.timeOffset == null) {
-      this.timeOffset = m.time * 1000 - performance.now();
+      this.timeOffset = m.time - performance.now();
     }
 
-    const playTime = m.time * 1000 - this.timeOffset + this.buffer_ms;
+    const playTime = m.time - this.timeOffset + this.buffer_ms;
     setTimeout(() => this.play(m.midiMessage),
                playTime - performance.now());
   }
