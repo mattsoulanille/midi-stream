@@ -29,7 +29,7 @@ const Message = new t.Type(
     const buf = Buffer.alloc(7);
     buf.set(a.midiMessage, 0);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(a.deltaTime, 3);
+    dv.setFloat32(3, a.deltaTime);
     return buf;
   }
 );
@@ -110,7 +110,7 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
       });
     }
 
-    const connectionInterval = setInterval(keepalive, UDP_TIMEOUT / 2);
+    const connectionInterval = setInterval(keepalive, UDP_TIMEOUT / 8);
     client.on('message', (msg, info) => {
       const maybeMessage = Message.decode(msg);
       if (info.address !== ip) {
