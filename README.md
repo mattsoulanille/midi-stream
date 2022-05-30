@@ -5,14 +5,19 @@ Stream midi using node.
 ```sh
 yarn
 ```
+
 ## Run the server
 ```sh
-node index.js
+yarn start
 ```
 
 ## Connect to the server
 ```sh
-node index.js [server ip address]
+yarn start [server ip address]
+```
+## Help
+```sh
+yarn start --help
 ```
 
 Uses port 2222
