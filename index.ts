@@ -4,6 +4,7 @@ import {ArgumentParser} from 'argparse';
 import * as net from 'net';
 import * as t from 'io-ts';
 import {isRight} from 'fp-ts/lib/Either';
+import {performance} from 'perf_hooks';
 
 const LocalMessage = t.type({
   midiMessage: t.tuple([t.number, t.number, t.number]),
