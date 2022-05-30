@@ -117,7 +117,7 @@ function makeUdpServer() {
   }
 
   server.on('message', (msg: Buffer, info) => {
-    if (msg.toString('utf8') === 'subscribe') {
+    if (msg.equals(Buffer.from('subscribe'))) {
       if (clients.has(info.address)) {
         const entry = clients.get(info.address)!;
         clearTimeout(entry.timeout);
