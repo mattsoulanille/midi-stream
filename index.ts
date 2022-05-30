@@ -159,10 +159,6 @@ function makeUdpClient(ip: string, cb: (m: Message) => void) {
     const connectionInterval = setInterval(keepalive, UDP_TIMEOUT / 8);
     const messageStream = new MessageStream(cb);
     client.on('message', (msg, info) => {
-      if (info.address !== ip) {
-        console.warn(`Ignoring message from ${info.address}`);
-        return;
-      }
       messageStream.insert(msg);
     });
     keepalive();
