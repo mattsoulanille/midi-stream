@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "Apache-2.0",
+  "scripts": {
+    "start": "yarn tsc && node index.js"
+  },
   "dependencies": {
     "@types/node": "^17.0.35",
     "argparse": "^2.0.1",
