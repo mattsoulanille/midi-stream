@@ -189,7 +189,7 @@ function getInput(inputName: string): midi.Input {
 
 type Protocol = 'tcp' | 'udp';
 function server(inputName: string) {
-  let input = getInput(inputName);
+  let input = new midi.Input();
   const activeNotes = new Set<number>();
   const udp = makeUdpServer();
   const tcp = makeTcpServer();
@@ -222,8 +222,7 @@ function server(inputName: string) {
     });
   }
 
-  setupInput(input);
-  let portOpen = true;
+  let portOpen = false;
 
   // There's no event for a device disconnecting, so use polling.
   setInterval(() => {
