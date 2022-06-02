@@ -66,6 +66,9 @@ function makeTcpServer() {
   server.on('connection', socket => {
     clients.add(socket);
     console.log([...clients].map(c => c.address()));
+    socket.on('error', err => {
+      console.log(err);
+    });
     socket.on('close', () => {
       clients.delete(socket);
       console.log([...clients].map(c => c.address()));
