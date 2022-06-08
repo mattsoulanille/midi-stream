@@ -7,9 +7,17 @@
   resolved "https://registry.yarnpkg.com/@types/argparse/-/argparse-2.0.10.tgz#664e84808accd1987548d888b9d21b3e9c996a6c"
   integrity sha512-C4wahC3gz3vQtvPazrJ5ONwmK1zSDllQboiWvpMM/iOswCYfBREFnjFbq/iWKIVOCl8+m5Pk6eva6/ZSsDuIGA==
 
-"@types/midi@link:../DefinitelyTyped/types/midi":
-  version "0.0.0"
-  uid ""
+"@types/midi@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/midi/-/midi-2.0.0.tgz#a71b99f6535de07008d2ad2ad542758603b28e6b"
+  integrity sha512-5ZnGxX5t1lYn6rNB4pDrv4ijU0UnTsXa7mW8ic/RsxMJcPE+aafqyNYgNFj/rUKUlXGgwDFROaji1VqFoogGNQ==
+  dependencies:
+    "@types/node" "*"
+
+"@types/node@*":
+  version "17.0.38"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.38.tgz#f8bb07c371ccb1903f3752872c89f44006132947"
+  integrity sha512-5jY9RhV7c0Z4Jy09G+NIDTsCZ5G0L5n+Z+p+Y7t5VJHM30bgwzSjVtlcBxqAj+6L/swIlvtOSzr8rBk/aNyV2g==
 
 "@types/node@^17.0.35":
   version "17.0.35"
