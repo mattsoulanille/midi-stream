@@ -1,5 +1,9 @@
 # midi-stream
-Stream midi using node.
+Stream midi over the internet.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
 
 ## Install dependencies
 ```sh
@@ -20,4 +24,14 @@ yarn start [server ip address]
 yarn start --help
 ```
 
-Uses port 2222
+Uses port 25144, which was chosen randomly.
+
+## License
+
+Apache 2.0; see [`LICENSE`](LICENSE) for details.
+
+## Disclaimer
+
+This project is not an official Google project. It is not supported by
+Google and Google specifically disclaims all warranties as to its quality,
+merchantability, or fitness for a particular purpose.
