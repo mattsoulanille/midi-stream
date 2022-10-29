@@ -319,32 +319,54 @@ function stuckNoteFixer(send: (m: Message) => void) {
   }
 }
 
-function fileWriter(name: string) {
+function fileWriter(noActivityTime=120_000) {
   const SMF = (JZZ.MIDI as any).SMF;
 
-  const smf = new SMF(0, 1000);
-  const trk = new SMF.MTrk();
-  smf.push(trk);
-  trk.add(0, JZZ.MIDI.smfBPM(60));
+  function makeMidi() {
+  }
 
-  process.on('SIGINT', () => {
-    fs.writeFileSync(name, smf.dump(), 'binary');
+  process.on('SIGINT', async () => {
+    await write(smf);
     process.exit(0);
   });
 
+  // TODO: Refactor this timeout code with stuckNoteFixer?
   let firstTime: number | undefined;
+  let songTimeout: NodeJS.Timeout;
+
+  async function write(smf: {dump(): Buffer}) {
+    const name = new Date().toISOString() + '.mid';
+    await fs.promises.writeFile(name, smf.dump(), 'binary');
+  }
+
+  let smf: any;
+  let trk: any;
+  function writeFileAndReset() {
+    if (smf) {
+      write(smf);
+    }
+
+    smf = new SMF(0, 1000);
+    trk = new SMF.MTrk();
+    smf.push(trk);
+    trk.add(0, JZZ.MIDI.smfBPM(60));
+    firstTime = undefined;
+  }
+  writeFileAndReset(); // Create initial smf and trk.
+
   return (m: Message) => {
+    clearTimeout(songTimeout);
     if (firstTime === undefined) {
-      firstTime = m.time
+      firstTime = m.time;
     }
     let time = m.time - firstTime;
-    console.log(time);
     trk.add(time, JZZ.MIDI(m.midiMessage));
+    songTimeout = setTimeout(writeFileAndReset, noActivityTime);
   }
 }
 
 function client(serverAddress: string, protocol: Protocol, bufferMs: number,
-                outputName?: string, write?: string) {
+                outputName?: string, write?: boolean) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const output = new midi.Output();
@@ -370,7 +392,7 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
 
   let writer: ReturnType<typeof fileWriter>;
   if (write) {
-    writer = fileWriter(write);
+    writer = fileWriter(5000);
   }
 
   const insert = stuckNoteFixer((m: Message) => {
@@ -417,10 +439,9 @@ if (require.main === module) {
     help: 'Buffer for notes in milliseconds.'
   });
   parser.add_argument('--write', '-w', {
-    type: String,
-    nargs: '?',
-    default: new Date().toISOString() + '.mid',
-    help: 'Write output to a midi file.'
+    //type: Boolean,
+    action: 'store_true',
+    help: 'Write output to midi files.'
   });
 
   const args = parser.parse_args();
