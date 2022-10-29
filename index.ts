@@ -215,14 +215,16 @@ function getInput(inputName: string): midi.Input {
 }
 
 type Protocol = 'tcp' | 'udp';
-function server(inputName: string) {
+function server(inputName: string, write?: string) {
   let input = new midi.Input();
   const activeNotes = new Set<number>();
   const udp = makeUdpServer();
   const tcp = makeTcpServer();
+  const writer = fileWriter(write);
   const send = (m: Message) => {
     udp(m);
     tcp(m);
+    writer?.(m);
   }
 
   let time: number;
@@ -460,6 +462,6 @@ if (require.main === module) {
            args.write);
   }
   else {
-    server(args.input);
+    server(args.input, args.write);
   }
 }
