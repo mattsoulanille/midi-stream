@@ -220,7 +220,10 @@ function server(inputName: string, write?: string) {
   const activeNotes = new Set<number>();
   const udp = makeUdpServer();
   const tcp = makeTcpServer();
-  const writer = fileWriter(write);
+  let writer: ReturnType<typeof fileWriter> | undefined;
+  if (write) {
+    writer = fileWriter(write, 5_000);
+  }
   const send = (m: Message) => {
     udp(m);
     tcp(m);
