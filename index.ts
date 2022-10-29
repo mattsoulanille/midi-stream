@@ -27,6 +27,8 @@ import * as JZZ from 'jzz';
 import * as JZZ_MIDI_SDF from 'jzz-midi-smf';
 JZZ_MIDI_SDF(JZZ);
 import * as fs from 'fs';
+import * as mkdirp from 'mkdirp';
+import * as path from 'path';
 
 const LocalMessage = t.type({
   midiMessage: t.tuple([t.number, t.number, t.number]),
@@ -319,11 +321,8 @@ function stuckNoteFixer(send: (m: Message) => void) {
   }
 }
 
-function fileWriter(noActivityTime=120_000) {
+function fileWriter(dir='.', noActivityTime=120_000) {
   const SMF = (JZZ.MIDI as any).SMF;
-
-  function makeMidi() {
-  }
 
   process.on('SIGINT', async () => {
     await write(smf);
@@ -336,7 +335,7 @@ function fileWriter(noActivityTime=120_000) {
 
   async function write(smf: {dump(): Buffer}) {
     const name = new Date().toISOString() + '.mid';
-    await fs.promises.writeFile(name, smf.dump(), 'binary');
+    await fs.promises.writeFile(path.join(dir, name), smf.dump(), 'binary');
   }
 
   let smf: any;
@@ -366,7 +365,7 @@ function fileWriter(noActivityTime=120_000) {
 }
 
 function client(serverAddress: string, protocol: Protocol, bufferMs: number,
-                outputName?: string, write?: boolean) {
+                outputName?: string, write?: string) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const output = new midi.Output();
@@ -392,7 +391,7 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
 
   let writer: ReturnType<typeof fileWriter>;
   if (write) {
-    writer = fileWriter(5000);
+    writer = fileWriter(write, 5_000);
   }
 
   const insert = stuckNoteFixer((m: Message) => {
@@ -439,12 +438,23 @@ if (require.main === module) {
     help: 'Buffer for notes in milliseconds.'
   });
   parser.add_argument('--write', '-w', {
-    //type: Boolean,
-    action: 'store_true',
-    help: 'Write output to midi files.'
+    type: String,
+    const: 'midi',
+    nargs: '?',
+    help: 'Directory to write midi files to.'
   });
 
   const args = parser.parse_args();
+  if (args.write) {
+    if (fs.existsSync(args.write)) {
+      if (!fs.lstatSync(args.write).isDirectory()) {
+        throw new Error(`Write path for midi files '${args.write}' is not a directory.`);
+      }
+    } else {
+      mkdirp(args.write);
+    }
+  }
+
   if (args.server_address) {
     client(args.server_address, args.protocol, args.buffer, args.output,
            args.write);
