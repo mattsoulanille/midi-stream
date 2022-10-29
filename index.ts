@@ -22,6 +22,11 @@ import * as net from 'net';
 import * as t from 'io-ts';
 import {isRight} from 'fp-ts/lib/Either';
 import {performance} from 'perf_hooks';
+import * as JZZ from 'jzz';
+// @ts-ignore
+import * as JZZ_MIDI_SDF from 'jzz-midi-smf';
+JZZ_MIDI_SDF(JZZ);
+import * as fs from 'fs';
 
 const LocalMessage = t.type({
   midiMessage: t.tuple([t.number, t.number, t.number]),
@@ -272,11 +277,11 @@ function server(inputName: string) {
 
 class BufferedMidi {
   private timeOffset: number | undefined;
-  constructor(readonly play: (m: midi.MidiMessage) => void,
+  constructor(readonly play: (m: midi.MidiMessage, playTime: number) => void,
               public buffer_ms: number) {}
   insert(m: Message) {
     if (this.buffer_ms === 0) {
-      this.play(m.midiMessage);
+      this.play(m.midiMessage, m.time);
       return;
     }
     if (this.timeOffset == null) {
@@ -284,33 +289,55 @@ class BufferedMidi {
     }
 
     const playTime = m.time - this.timeOffset + this.buffer_ms;
-    setTimeout(() => this.play(m.midiMessage),
+    setTimeout(() => this.play(m.midiMessage, m.time),
                playTime - performance.now());
   }
 }
 
-function stuckNoteFixer(play: (m: midi.MidiMessage) => void) {
+const STUCK_NOTE_TIMEOUT = 30_000;
+function stuckNoteFixer(play: (m: midi.MidiMessage, playTime: number) => void) {
   const notes = new Map<number /* note */, NodeJS.Timeout>();
-  return (m: midi.MidiMessage) => {
+  return (m: midi.MidiMessage, playTime: number) => {
     if (m[0] === 144) {
       const note = m[1];
       if (notes.has(note)) {
-        play([144, m[1], 0]);
+        play([144, m[1], 0], playTime);
         clearTimeout(notes.get(note));
         notes.delete(note);
       }
       if (m[2] !== 0) {
         notes.set(note, setTimeout(() => {
-          play([144, m[1], 0]);
-        }, 30_000));
+          play([144, m[1], 0], playTime + STUCK_NOTE_TIMEOUT);
+        }, STUCK_NOTE_TIMEOUT));
       }
     }
-    play(m);
+    play(m, playTime);
+  }
+}
+
+function fileWriter(name: string) {
+  const SMF = (JZZ.MIDI as any).SMF;
+
+  const smf = new SMF(0, 96);
+  const trk = new SMF.MTrk();
+  smf.push(trk);
+  trk.add(0, JZZ.MIDI.smfBPM(90));
+
+  process.on('SIGINT', () => {
+    fs.writeFileSync(name, smf.dump(), 'binary');
+    process.exit(0);
+  });
+
+  return (midi: midi.MidiMessage, playTime: number) => {
+    const midiCommand = midi[2] === 0
+      ? JZZ.MIDI.noteOff : JZZ.MIDI.noteOn;
+
+    trk.add(playTime, midiCommand(0, midi[1], midi[2]));
   }
 }
 
 function client(serverAddress: string, protocol: Protocol, bufferMs: number,
-                outputName?: string) {
+                outputName?: string, write?: string) {
   // creating a client socket
   console.log(`Connecting to ${serverAddress}`);
   const output = new midi.Output();
@@ -327,9 +354,17 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
     console.log(`Using virtual port ${virtualPort}`);
     output.openVirtualPort(virtualPort);
   }
-  function play(midi: midi.MidiMessage) {
-    output.sendMessage(midi);
+
+  let writer: ReturnType<typeof fileWriter>;
+  if (write) {
+    writer = fileWriter(write);
   }
+
+  function play(midi: midi.MidiMessage, playTime: number) {
+    output.sendMessage(midi);
+    writer?.(midi, playTime);
+  }
+
   const buf = new BufferedMidi(stuckNoteFixer(play), bufferMs);
   const insert = (m: Message) => buf.insert(m);
 
@@ -369,12 +404,19 @@ if (require.main === module) {
   parser.add_argument('--buffer', '-b', {
     type: Number,
     default: 5000,
-    help: 'Buffer for notes in milliseconds'
+    help: 'Buffer for notes in milliseconds.'
+  });
+  parser.add_argument('--write', '-w', {
+    type: String,
+    nargs: '?',
+    default: new Date().toISOString() + '.mid',
+    help: 'Write output to a midi file.'
   });
 
   const args = parser.parse_args();
   if (args.server_address) {
-    client(args.server_address, args.protocol, args.buffer, args.output);
+    client(args.server_address, args.protocol, args.buffer, args.output,
+           args.write);
   }
   else {
     server(args.input);

@@ -24,6 +24,11 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.35.tgz#635b7586086d51fb40de0a2ec9d1014a5283ba4a"
   integrity sha512-vu1SrqBjbbZ3J6vwY17jBs8Sr/BKA+/a/WtjRG+whKg1iuLFOosq872EXS0eXWILdO36DHQQeku/ZcL6hz2fpg==
 
+"@types/webmidi@^2.0.6":
+  version "2.0.6"
+  resolved "https://registry.npmjs.org/@types/webmidi/-/webmidi-2.0.6.tgz#c9b1428bbc5d5f49cc6201eae0dc5e2b3fd23e0e"
+  integrity sha512-sfS0A5IryqmBrUpcGPipEPeFdpqmZzP6b6lZFxHKgz5n2Vhzh4yJ5P2TvoDUhDjqJyv0Y25ng0Qodgo2Vu08ug==
+
 argparse@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/argparse/-/argparse-2.0.1.tgz#246f50f3ca78a3240f6c997e8a9bd1eac49e4b38"
@@ -57,6 +62,26 @@ io-ts@^2.2.16:
   version "2.2.16"
   resolved "https://registry.yarnpkg.com/io-ts/-/io-ts-2.2.16.tgz#597dffa03db1913fc318c9c6df6931cb4ed808b2"
   integrity sha512-y5TTSa6VP6le0hhmIyN0dqEXkrZeJLeC5KApJq6VLci3UEKF80lZ+KuoUs02RhBxNWlrqSNxzfI7otLX1Euv8Q==
+
+jazz-midi@^1.7.6:
+  version "1.7.6"
+  resolved "https://registry.npmjs.org/jazz-midi/-/jazz-midi-1.7.6.tgz#6bd3a9cb6dce0109271252c8c682ac04184c4018"
+  integrity sha512-vKCmBpotb1y+kEbRlu43COar2LzV46uOTTzyM/zTx5LR7WUTWle7FFC8rphqBVdryW66QtOyUA2N/DWZToBang==
+
+jzz-midi-smf@^1.6.9:
+  version "1.6.9"
+  resolved "https://registry.npmjs.org/jzz-midi-smf/-/jzz-midi-smf-1.6.9.tgz#c5204aadb7aba90b64523eca3d6df2922bb577c6"
+  integrity sha512-vZRA3TqZenaHSlYNhY1eXEuVNrNoL7lbLwe3Cu1PpcSu/Bpbu7n4hQZk2HdbDzeeTApiTDgmYvhykkegfZV4Ew==
+  dependencies:
+    jzz "^1.5.1"
+
+jzz@^1.5.1, jzz@^1.5.3:
+  version "1.5.3"
+  resolved "https://registry.npmjs.org/jzz/-/jzz-1.5.3.tgz#6af163289a864f4bcfaf5cbd3d4cd36cc42cc5b3"
+  integrity sha512-gEih5CUMkK8n+2Mm5QHi+T64TLb68UxyQgYAOATSIA9Js3ZjMOmnGet48thbT1wLbh9J+NK+3wPcEiGo0OGvng==
+  dependencies:
+    "@types/webmidi" "^2.0.6"
+    jazz-midi "^1.7.6"
 
 midi@^2.0.0:
   version "2.0.0"
