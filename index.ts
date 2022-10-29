@@ -223,7 +223,7 @@ function server(inputName: string, write?: string) {
   const [sendTcp, tcpClients] = makeTcpServer();
   let writer: ReturnType<typeof fileWriter> | undefined;
   if (write) {
-    writer = fileWriter(write, 5_000);
+    writer = fileWriter(write);
   }
   const send = (m: Message) => {
     sendUdp(m);
@@ -338,7 +338,7 @@ function stuckNoteFixer(send: (m: Message) => void) {
   }
 }
 
-function fileWriter(dir='.', noActivityTime=120_000) {
+function fileWriter(dir='.', noActivityTime=10_000) {
   const SMF = (JZZ.MIDI as any).SMF;
 
   process.on('SIGINT', async () => {
@@ -408,7 +408,7 @@ function client(serverAddress: string, protocol: Protocol, bufferMs: number,
 
   let writer: ReturnType<typeof fileWriter>;
   if (write) {
-    writer = fileWriter(write, 5_000);
+    writer = fileWriter(write);
   }
 
   const insert = stuckNoteFixer((m: Message) => {
