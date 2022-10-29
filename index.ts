@@ -324,6 +324,10 @@ function stuckNoteFixer(send: (m: Message) => void) {
         send({midiMessage: [144, m.midiMessage[1], 0], time: m.time});
         clearTimeout(notes.get(note));
         notes.delete(note);
+        if (m.midiMessage[2] === 0) {
+          // Don't send the same note again.
+          return;
+        }
       }
       if (m.midiMessage[2] !== 0) {
         notes.set(note, setTimeout(() => {
