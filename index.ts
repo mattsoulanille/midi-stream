@@ -77,11 +77,11 @@ function makeTcpServer() {
 
   server.listen(PORT);
 
-  return (message: Message) => {
+  return [(message: Message) => {
     for (const socket of clients) {
       socket.write(Message.encode(message));
     }
-  }
+  }, clients] as const;
 }
 
 function makeTcpClient(ip: string, cb: (m: Message) => void) {
@@ -138,11 +138,11 @@ function makeUdpServer() {
   });
 
   server.bind({port: PORT});
-  return (message: Message) => {
+  return [(message: Message) => {
     for (const [address, {port}] of clients) {
       server.send(Message.encode(message), port, address);
     }
-  }
+  }, clients] as const;
 }
 
 function makeUdpClient(ip: string, cb: (m: Message) => void) {
@@ -194,11 +194,11 @@ type Protocol = 'tcp' | 'udp';
 function server(inputName: string) {
   let input = new midi.Input();
   const activeNotes = new Set<number>();
-  const udp = makeUdpServer();
-  const tcp = makeTcpServer();
+  const [sendUdp, udpClients] = makeUdpServer();
+  const [sendTcp, tcpClients] = makeTcpServer();
   const send = (m: Message) => {
-    udp(m);
-    tcp(m);
+    sendUdp(m);
+    sendTcp(m);
   }
 
   let time: number;
@@ -251,6 +251,17 @@ function server(inputName: string) {
       }
     }
   }, 50);
+
+  // Respond to requests for the number of clients
+  const clientsCountServer = udp.createSocket('udp4');
+  clientsCountServer.bind({port: PORT + 1})
+  clientsCountServer.on('message', (msg: Buffer, info) => {
+    if (msg.equals(Buffer.from('clients'))) {
+      const buf = Buffer.from(
+        new Uint32Array([udpClients.size + tcpClients.size]).buffer);
+      clientsCountServer.send(buf, info.port, info.address);
+    }
+  });
 }
 
 class BufferedMidi {
